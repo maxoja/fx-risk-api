@@ -24,12 +24,13 @@ async function pressBackspaces(page, backspaces=20) {
 }
 
 async function prepBrowser(proxy = true, headless = false) {
-    const args = [PROXY_ARG]
+    const args = ['--no-sandbox', '--disable-setuid-sandbox']
 
-    if(proxy)
-        return await puppeteer.launch({ headless, args })
-    else
-        return await puppeteer.launch({ headless })
+    if(proxy) {
+        args.push(PROXY_ARG)
+    }
+
+    return await puppeteer.launch({ headless, args })
 }
 
 async function prepPage(browser, useProxy, width=2000, height=1000) {
