@@ -12,26 +12,29 @@ const BUTTON_CALCULATE = '#submit-btn'
 const BASE_CURRENCY='USD'
 const URL = 'https://www.xm.com/forex-calculators/pip-value'
 const ACCOUNT_TYPE = 'Standard'
-const CACHE_EXPIRE = 1000*60*60
+const CACHE_EXPIRE = 1000*60*60 // 60 min
+const AUTO_FETCH_INTERFAL = 1000*60*3 // 3 min
+const AUTO_FETCH_PAIRS = ['EURUSD', 'AUDCAD', 'AUDNZD', 'EURCHF', 'EURGBP', 'USDJPY']
 
 const caches = {}
 
 // recommended risk is at 1.5%
 async function suggestLot(pair, distancePoints, risk=220.0) {    
-    const pipValue = await fetchPipValue(pair)
+    const pipValue = await fetchPipValueOneLot(pair)
     const result = calculateLot(pipValue, distancePoints, risk)
-    console.log('suggested lot for', pair, '=', result)
     return result
 }
 
-async function fetchPipValue(pair, LOT=1) {
-    if(pair in caches) {
-        cachedObj = caches[pair]
+async function fetchPipValueOneLot(pair, useCache=true) {
+    pairBase = pair.substring(pair.length-3)
+    if(useCache & pairBase in caches) {
+        cachedObj = caches[pairBase]
         if(Date.now() - cachedObj.time <= CACHE_EXPIRE) {
             return cachedObj.value
         }
     }
 
+    console.log('fetching pip value of', pair)
     const browser = await pup.prepBrowser(false, true)
     const page = await pup.prepPage(browser, false)
     await page.goto(URL, {waitUntil:'load'})
@@ -40,7 +43,7 @@ async function fetchPipValue(pair, LOT=1) {
     await delay(1000)
 
     await page.select(DROP_PAIR, pair)
-    await pup.waitVisibleAndType(page, TEXT_INPUT_LOT, LOT.toString())
+    await pup.waitVisibleAndType(page, TEXT_INPUT_LOT, '1')
     await page.select(DROP_BASE_CURRENCY, BASE_CURRENCY)
     await page.select(DROP_ACCOUNT_TYPE, ACCOUNT_TYPE)
 
@@ -50,7 +53,7 @@ async function fetchPipValue(pair, LOT=1) {
     const pipValue = parseFloat(await page.evaluate(s=>document.querySelector(s).value,TEXT_OUTPUT_PIP_VALUE))
     await browser.close()
     
-    caches[pair] = {
+    caches[pairBase] = {
         time: Date.now(),
         value: pipValue
     }
@@ -64,6 +67,17 @@ function calculateLot(pipValue, distancePoint, maxRisk) {
     return Math.floor(goodLot*100)/100
 }
 
+async function fetchLoop() {
+    console.log('fetch loop starting on', AUTO_FETCH_PAIRS)
+    while(true) {
+        for(let pair of AUTO_FETCH_PAIRS) {
+            await fetchPipValueOneLot(pair, false)
+            await delay(AUTO_FETCH_INTERFAL)
+        }
+    }
+}
+
 module.exports = {
-    suggestLot
+    suggestLot,
+    fetchLoop
 }

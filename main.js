@@ -20,6 +20,7 @@ app.get(BASE_PATH + '/:pair-:points', async (req, res) => {
     const pair = req.params['pair']
     const points = parseInt(req.params['points'])
     const lot = await fetcher.suggestLot(pair, points)
+    console.log('suggested lot for', pair, '=>', lot)
     res.json({
         pair,
         points,
@@ -27,4 +28,5 @@ app.get(BASE_PATH + '/:pair-:points', async (req, res) => {
     })
 })
 
+fetcher.fetchLoop();
 app.listen(PORT, () => console.log(`Started server at http://localhost:${PORT}`));
