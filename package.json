@@ -1,0 +1,27 @@
+{
+  "name": "fx-risk-api",
+  "version": "1.0.0",
+  "description": "fx-risk-api",
+  "main": "main.js",
+  "dependencies": {
+    "bluebird": "^3.7.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "fs-promise": "^2.0.3",
+    "puppeteer": "^5.5.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxoja/fx-risk-api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/maxoja/fx-risk-api/issues"
+  },
+  "homepage": "https://github.com/maxoja/fx-risk-api#readme"
+}
