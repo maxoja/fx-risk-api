@@ -13,8 +13,8 @@ const BASE_CURRENCY='USD'
 const URL = 'https://www.xm.com/forex-calculators/pip-value'
 const ACCOUNT_TYPE = 'Standard'
 const CACHE_EXPIRE = 1000*60*60 // 60 min
-const AUTO_FETCH_INTERFAL = 1000*60*5 // 3 min
-const AUTO_FETCH_PAIRS = ['EURUSD', 'AUDCAD', 'AUDNZD', 'EURCHF', 'EURGBP', 'USDJPY', 'EURCHF', 'EURSGD']
+const AUTO_FETCH_INTERFAL = 1000*60*3 // 3 min
+const AUTO_FETCH_PAIRS = ['EURUSD', 'AUDCAD', 'AUDNZD', 'EURCHF', 'EURGBP', 'USDJPY', 'EURCHF', 'EURSGD', 'EURAUD']
 
 const caches = {}
 
@@ -67,7 +67,7 @@ function calculateLot(pipValue, distancePoint, maxRisk) {
     return Math.floor(goodLot*100)/100
 }
 
-async function fetchLoop() {
+async function fetchPipValueLoop() {
     console.log('fetch loop starting on', AUTO_FETCH_PAIRS)
     while(true) {
         for(let pair of AUTO_FETCH_PAIRS) {
@@ -79,5 +79,5 @@ async function fetchLoop() {
 
 module.exports = {
     suggestLot,
-    fetchLoop
+    fetchPipValueLoop
 }
