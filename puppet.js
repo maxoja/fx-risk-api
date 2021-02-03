@@ -24,7 +24,7 @@ async function pressBackspaces(page, backspaces=20) {
 }
 
 async function prepBrowser(proxy = true, headless = false) {
-    const args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--disable-features=IsolateOrigins,site-per-process']
+    const args = ['--no-sandbox', '--disable-setuid-sandbox']
 
     if(proxy) {
         args.push(PROXY_ARG)

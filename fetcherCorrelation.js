@@ -1,10 +1,16 @@
 const { delay } = require('bluebird')
 const pup = require('./puppet')
 
+class TradePos {
+    constructor(pair, buy) {
+        this.pair = pair
+        this.buy = buy
+    }
+}
+
 const CACHE_EXPIRE = 1000*60*60 // 60 min
 const AUTO_FETCH_INTERFAL = 1000*60*1 // 1 min
 
-const URL_CORRELATION = 'https://twnz.dev/webApi/fxLot/correlation'
 const PAIR_ID = {
     AUDCAD: 8,
     AUDCHF: 47,
@@ -51,6 +57,47 @@ function getBrowser() {
     return browser
 }
 
+async function suggestTradePos(currentPositions) {
+    const suggestions = []
+    for(let pair in PAIR_ID) {
+        let couldBuy = true;
+        let couldSell = true;
+
+        for(let pos of currentPositions) {
+            if(pos.pair === pair) {
+                couldBuy = false;
+                couldSell = false;
+                break;
+            }
+
+            const table = correlationTable[pair]
+            if(Object.keys(table).length === 0) {
+                await fetchCorrelationList(pair)
+            }
+            const correlation = table[pos.pair]
+            if(couldBuy) {
+                if(pos.buy && correlation > 50 )
+                    couldBuy = false
+                if(!pos.buy && correlation < -50)
+                    couldBuy = false
+            }
+            if(couldSell) {
+                if(pos.buy && correlation < -50)
+                    couldSell = false
+                if(!pos.buy && correlation > 50)
+                    couldSell = false
+            }
+        }
+
+        if(couldBuy)
+            suggestions.push(new TradePos(pair, true))
+        if(couldSell)
+            suggestions.push(new TradePos(pair, false))
+    }
+
+    return suggestions
+}
+
 function rowPairSelector(id) {
     const oneBasedId = id+1
     return `#symbolMarketCorrelation > tbody > tr:nth-child(${oneBasedId}) > td:nth-child(1)`
@@ -62,45 +109,43 @@ function rowCorrelationSelector(id) {
 }
 
 async function fetchCorrelationList(pair) {
-
     console.log('fetching correlation of', pair)
     const browser = getBrowser()
     const page = await pup.prepPage(browser, false)
-    await page.goto(`${URL_CORRELATION}/${pair}`, {waitUntil:'load'})
+    const pairId = PAIR_ID[pair]
+    const allPairIds = Object.keys(PAIR_ID).map(function(key){
+        return PAIR_ID[key];
+    });
 
-    await page.waitForSelector('iframe[name="coframe"]');
+    await page.goto(`https://widgets.myfxbook.com/widgets/market-correlation.html?rowSymbols=${allPairIds.join()}&colSymbols=${pairId}&timeScale=1440`, {waitUntil:'load'})
+    await page.waitForSelector('tr');
 
     for(let i = 0; i < Object.keys(PAIR_ID).length; i++) {
-        const frame = await page.frames().find(frame => frame.name() === 'coframe'); // Find the right frame.
-        const pairStr = await frame.evaluate((s) => document.querySelector(s).innerText, rowPairSelector(i))
-        const corStr = await frame.evaluate((s) => document.querySelector(s).innerText, rowCorrelationSelector(i))
+        const pairStr = await page.evaluate((s) => document.querySelector(s).innerText, rowPairSelector(i))
+        const corStr = await page.evaluate((s) => document.querySelector(s).innerText, rowCorrelationSelector(i))
         const corPercent = parseFloat(corStr.substring(0, corStr.length-1))
         correlationTable[pair][pairStr] = corPercent
+        // console.log(pairStr, corPercent)
     }
+
     console.log('fetching correlation of', pair, 'finished')
 
     await page.close()
 }
 
-// function calculateLot(pipValue, distancePoint, maxRisk) {
-//     const pointValue = pipValue/10.0
-//     const oneLotRisk = pointValue*distancePoint
-//     const goodLot = maxRisk/oneLotRisk
-//     return Math.floor(goodLot*100)/100
-// }
-
 async function fetchLoop() {
     console.log('fetch loop for correlation start')
     while(true) {
         for(let pair in PAIR_ID) {
-            await fetchCorrelationList(pair, false)
+            await fetchCorrelationList(pair)
             await delay(AUTO_FETCH_INTERFAL)
         }
     }
 }
 
 module.exports = {
-    PAIR_ID,
     fetchLoop,
-    setBrowser
+    setBrowser,
+    TradePos,
+    suggestTradePos
 }
