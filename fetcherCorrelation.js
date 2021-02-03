@@ -41,6 +41,16 @@ for(let pair in PAIR_ID) {
     correlationTable[pair] = {}
 }
 
+let browser = null
+
+function setBrowser(newBrowser) {
+    browser = newBrowser
+}
+
+function getBrowser() {
+    return browser
+}
+
 function rowPairSelector(id) {
     const oneBasedId = id+1
     return `#symbolMarketCorrelation > tbody > tr:nth-child(${oneBasedId}) > td:nth-child(1)`
@@ -54,7 +64,7 @@ function rowCorrelationSelector(id) {
 async function fetchCorrelationList(pair) {
 
     console.log('fetching correlation of', pair)
-    const browser = await pup.prepBrowser(false, true)
+    const browser = getBrowser()
     const page = await pup.prepPage(browser, false)
     await page.goto(`${URL_CORRELATION}/${pair}`, {waitUntil:'load'})
 
@@ -68,6 +78,8 @@ async function fetchCorrelationList(pair) {
         correlationTable[pair][pairStr] = corPercent
     }
     console.log('fetching correlation of', pair, 'finished')
+
+    await page.close()
 }
 
 // function calculateLot(pipValue, distancePoint, maxRisk) {
@@ -89,5 +101,6 @@ async function fetchLoop() {
 
 module.exports = {
     PAIR_ID,
-    fetchLoop
+    fetchLoop,
+    setBrowser
 }

@@ -1,6 +1,7 @@
 const cors = require('cors')
 const express = require('express');
 
+const pup = require('./puppet')
 const fetcher = require('./fetcher')
 const fetcherCor = require('./fetcherCorrelation')
 const {BASE_PATH, PORT} = require('./settings')
@@ -52,6 +53,15 @@ app.get(BASE_PATH + '/correlation/:pair', (req, res) => {
 `)
 })
 
-fetcher.fetchPipValueLoop();
-fetcherCor.fetchLoop();
+async function initFetchers() {
+    console.log('initiating browser for fetchers')
+    const browser = await pup.prepBrowser(false, true)
+    fetcher.setBrowser(browser)
+    fetcherCor.setBrowser(browser)
+    fetcherCor.fetchLoop();
+    fetcher.fetchPipValueLoop();
+}
+
+initFetchers()
+
 app.listen(PORT, () => console.log(`Started server at http://localhost:${PORT}`));

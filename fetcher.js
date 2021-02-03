@@ -17,6 +17,15 @@ const AUTO_FETCH_INTERFAL = 1000*60*3 // 3 min
 const AUTO_FETCH_PAIRS = ['EURUSD', 'AUDCAD', 'AUDNZD', 'EURCHF', 'EURGBP', 'USDJPY', 'EURCHF', 'EURSGD', 'EURAUD']
 
 const caches = {}
+let browser = null
+
+function setBrowser(newBrowser) {
+    browser = newBrowser
+}
+
+function getBrowser() {
+    return browser
+}
 
 // recommended risk is at 1.5%
 async function suggestLot(pair, distancePoints, risk=220.0) {    
@@ -25,6 +34,7 @@ async function suggestLot(pair, distancePoints, risk=220.0) {
     return result
 }
 
+let cookiesConfirmed = false;
 async function fetchPipValueOneLot(pair, useCache=true) {
     pairBase = pair.substring(pair.length-3)
     if(useCache & pairBase in caches) {
@@ -35,13 +45,16 @@ async function fetchPipValueOneLot(pair, useCache=true) {
     }
 
     console.log('fetching pip value of', pair)
-    const browser = await pup.prepBrowser(false, true)
+    const browser = getBrowser()
     const page = await pup.prepPage(browser, false)
     await page.goto(URL, {waitUntil:'load'})
 
-    await pup.waitVisibleAndClick(page, BUTTON_COOKIE)
-    await delay(1000)
+    if(!cookiesConfirmed) {
+        await pup.waitVisibleAndClick(page, BUTTON_COOKIE)
+        cookiesConfirmed = true
+    }
 
+    await delay(1000)
     await page.select(DROP_PAIR, pair)
     await pup.waitVisibleAndType(page, TEXT_INPUT_LOT, '1')
     await page.select(DROP_BASE_CURRENCY, BASE_CURRENCY)
@@ -51,12 +64,14 @@ async function fetchPipValueOneLot(pair, useCache=true) {
 
     await pup.waitVisibleAndClick(page, TEXT_OUTPUT_PIP_VALUE)
     const pipValue = parseFloat(await page.evaluate(s=>document.querySelector(s).value,TEXT_OUTPUT_PIP_VALUE))
-    await browser.close()
+    await page.close()
     
     caches[pairBase] = {
         time: Date.now(),
         value: pipValue
     }
+
+    console.log('fetching pip value of', pair, 'finished')
     return pipValue
 }
 
@@ -79,5 +94,6 @@ async function fetchPipValueLoop() {
 
 module.exports = {
     suggestLot,
-    fetchPipValueLoop
+    fetchPipValueLoop,
+    setBrowser,
 }
