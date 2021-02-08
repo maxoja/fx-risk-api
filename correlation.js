@@ -2,13 +2,7 @@ const { delay } = require('bluebird')
 const fetcher = require('./crawler')
 
 const {POLL_INTERVAL} = require('./settings')
-
-class TradePos {
-    constructor(pair, buy) {
-        this.pair = pair
-        this.buy = buy
-    }
-}
+const {TradePos} = require('./model')
 
 const PAIR_ID = {
     AUDCAD: 8,
@@ -114,8 +108,9 @@ async function fetchCorrelationList(pair) {
             const corStr = await page.evaluate((s) => document.querySelector(s).innerText, rowCorrelationSelector(i))
             const corPercent = parseFloat(corStr.substring(0, corStr.length-1))
             correlationTable[pair][pairStr] = corPercent
-            console.log(pair, pairStr, corPercent)
         }
+
+        return null
     }
     
     await fetcher.crawlAndProduce(URL, onFetch)
@@ -131,7 +126,6 @@ async function fetchLoop() {
 }
 
 module.exports = {
-    TradePos,
     fetchLoop,
     suggestTradePos
 }
