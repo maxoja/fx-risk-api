@@ -1,5 +1,7 @@
 const { delay } = require('bluebird')
-const pup = require('./puppet')
+const fetcher = require('./crawler')
+
+const {POLL_INTERVAL} = require('./settings')
 
 class TradePos {
     constructor(pair, buy) {
@@ -7,8 +9,6 @@ class TradePos {
         this.buy = buy
     }
 }
-
-const AUTO_FETCH_INTERFAL = 1000*60*1 // 1 min
 
 const PAIR_ID = {
     AUDCAD: 8,
@@ -46,18 +46,9 @@ for(let pair in PAIR_ID) {
     correlationTable[pair] = {}
 }
 
-let browser = null
-
-function setBrowser(newBrowser) {
-    browser = newBrowser
-}
-
-function getBrowser() {
-    return browser
-}
-
 async function suggestTradePos(currentPositions) {
     const suggestions = []
+    
     for(let pair in PAIR_ID) {
         let couldBuy = true;
         let couldSell = true;
@@ -109,42 +100,38 @@ function rowCorrelationSelector(id) {
 
 async function fetchCorrelationList(pair) {
     console.log('fetching correlation of', pair)
-    const browser = getBrowser()
-    const page = await pup.prepPage(browser, false)
     const pairId = PAIR_ID[pair]
     const allPairIds = Object.keys(PAIR_ID).map(function(key){
         return PAIR_ID[key];
     });
 
-    await page.goto(`https://widgets.myfxbook.com/widgets/market-correlation.html?rowSymbols=${allPairIds.join()}&colSymbols=${pairId}&timeScale=1440`, {waitUntil:'load'})
-    await page.waitForSelector('tr');
+    const URL = `https://widgets.myfxbook.com/widgets/market-correlation.html?rowSymbols=${allPairIds.join()}&colSymbols=${pairId}&timeScale=1440`
+    const onFetch = async (page) => {
+        await page.waitForSelector('tr');
 
-    for(let i = 0; i < Object.keys(PAIR_ID).length; i++) {
-        const pairStr = await page.evaluate((s) => document.querySelector(s).innerText, rowPairSelector(i))
-        const corStr = await page.evaluate((s) => document.querySelector(s).innerText, rowCorrelationSelector(i))
-        const corPercent = parseFloat(corStr.substring(0, corStr.length-1))
-        correlationTable[pair][pairStr] = corPercent
-        // console.log(pairStr, corPercent)
+        for(let i = 0; i < Object.keys(PAIR_ID).length; i++) {
+            const pairStr = await page.evaluate((s) => document.querySelector(s).innerText, rowPairSelector(i))
+            const corStr = await page.evaluate((s) => document.querySelector(s).innerText, rowCorrelationSelector(i))
+            const corPercent = parseFloat(corStr.substring(0, corStr.length-1))
+            correlationTable[pair][pairStr] = corPercent
+            console.log(pair, pairStr, corPercent)
+        }
     }
-
-    console.log('fetching correlation of', pair, 'finished')
-
-    await page.close()
+    
+    await fetcher.crawlAndProduce(URL, onFetch)
 }
 
 async function fetchLoop() {
-    console.log('fetch loop for correlation start')
     while(true) {
         for(let pair in PAIR_ID) {
             await fetchCorrelationList(pair)
-            await delay(AUTO_FETCH_INTERFAL)
+            await delay(POLL_INTERVAL)
         }
     }
 }
 
 module.exports = {
-    fetchLoop,
-    setBrowser,
     TradePos,
+    fetchLoop,
     suggestTradePos
 }
