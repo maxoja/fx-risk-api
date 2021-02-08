@@ -12,7 +12,7 @@ const BUTTON_CALCULATE = '#submit-btn'
 const BASE_CURRENCY='USD'
 const URL = 'https://www.xm.com/forex-calculators/pip-value'
 const ACCOUNT_TYPE = 'Standard'
-const CACHE_EXPIRE = 1000*60*60 // 60 min
+const CACHE_EXPIRE = 1000*60*120 // 120 min
 const AUTO_FETCH_INTERFAL = 1000*60*3 // 3 min
 const AUTO_FETCH_PAIRS = ['EURUSD', 'AUDCAD', 'AUDNZD', 'EURCHF', 'EURGBP', 'USDJPY', 'EURCHF', 'EURSGD', 'EURAUD']
 

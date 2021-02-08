@@ -8,7 +8,6 @@ class TradePos {
     }
 }
 
-const CACHE_EXPIRE = 1000*60*60 // 60 min
 const AUTO_FETCH_INTERFAL = 1000*60*1 // 1 min
 
 const PAIR_ID = {
