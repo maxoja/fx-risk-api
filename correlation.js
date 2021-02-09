@@ -37,7 +37,7 @@ async function calculateAverageCorrelation(currentPositions) {
             continue
 
         const averageCorrelation = correlationSum/currentPositions.length
-        scores[pair] = Math.round(averageCorrelation)
+        scores[pair] = utils.roundPrecision(averageCorrelation, 2)
     }
 
     return scores
@@ -59,6 +59,7 @@ async function suggestDiversification(currentPositions) {
 
             const table = correlationTable[pair]
             if(Object.keys(table).length === 0) {
+                await delay(1000)
                 await fetchCorrelationList(pair)
             }
             const correlation = table[pos.pair]

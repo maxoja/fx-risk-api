@@ -32,7 +32,7 @@ async function fetchPipValueOneLot(pair, useCache=true) {
     if(useCache & pairBase in caches) {
         cachedObj = caches[pairBase]
         if(Date.now() - cachedObj.time <= CACHE_EXPIRE) {
-            if(cacheObj.value !== null)
+            if(cachedObj.value !== null)
                 return cachedObj.value
         }
     }
@@ -65,14 +65,15 @@ async function fetchPipValueOneLot(pair, useCache=true) {
         return pipValue
     }
 
-    return await crawler.crawlAndProduce(URL, onFetch)
+    await crawler.crawlAndProduce(URL, onFetch)
+    return await fetchPipValueOneLot(pair)
 }
 
 function calculateLot(pipValue, distancePoint, maxRisk) {
     const pointValue = pipValue/10.0
     const oneLotRisk = pointValue*distancePoint
     const goodLot = maxRisk/oneLotRisk
-    return utils.roundPrecision(goodLot)
+    return utils.roundPrecision(goodLot, 2)
 }
 
 async function fetchPipValueLoop() {
