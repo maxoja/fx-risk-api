@@ -2,9 +2,10 @@ module.exports = {
     PORT: 5001,
     BASE_PATH: '/webApi/fxLot',
     BASE_CURRENCY: 'USD',
-    CACHE_EXPIRE: 1000*60*120,
+    CACHE_EXPIRE_SEC: 60*120,
     POLL_INTERVAL: 1000*60*3,
     CORRELATION_THRESH: 50,
+    AVG_CORRELATION_THRESH: 25,
     PAIR_ID: {
         AUDCAD: 8,
         AUDCHF: 47,
@@ -34,5 +35,7 @@ module.exports = {
         USDCAD: 5,
         USDCHF: 29,
         USDJPY: 3,
-    }
+    },
+    AUTO_FETCH_PAIRS: ['EURUSD', 'AUDCAD', 'AUDNZD', 'EURCHF', 'EURGBP', 'USDJPY', 'EURCHF', 'EURSGD', 'EURAUD'],
+    ACCOUNT_TYPE: 'Standard',
 }

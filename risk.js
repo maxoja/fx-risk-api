@@ -2,71 +2,61 @@ const { delay } = require('bluebird')
 const pup = require('./puppet')
 const crawler = require('./crawler')
 const utils = require('./utils')
-
-const {BASE_CURRENCY, CACHE_EXPIRE, POLL_INTERVAL} = require('./settings')
-
-const TEXT_INPUT_LOT = '#forex-calculator > div > div.col-sm-8 > form > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input'
-const TEXT_OUTPUT_PIP_VALUE = '#forex-calculator > div > div.col-sm-8 > form > div:nth-child(4) > div:nth-child(1) > div > input'
-const DROP_PAIR = '#dp_currency_pair'
-const DROP_BASE_CURRENCY = '#forex-calculator > div > div.col-sm-8 > form > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > select'
-const DROP_ACCOUNT_TYPE = '#account_type_select'
-const BUTTON_COOKIE = '#cookieModal > div > div > div.cookie-modal__defaultBlock > div.modal-body > div.row.text-center > div > button'
-const BUTTON_CALCULATE = '#submit-btn'
+const {BASE_CURRENCY, CACHE_EXPIRE_SEC, POLL_INTERVAL, AUTO_FETCH_PAIRS, ACCOUNT_TYPE} = require('./settings')
 
 const URL = 'https://www.xm.com/forex-calculators/pip-value'
-const ACCOUNT_TYPE = 'Standard'
-const AUTO_FETCH_PAIRS = ['EURUSD', 'AUDCAD', 'AUDNZD', 'EURCHF', 'EURGBP', 'USDJPY', 'EURCHF', 'EURSGD', 'EURAUD']
-
-const caches = {}
+const elems = {
+    textInputLot: '#forex-calculator > div > div.col-sm-8 > form > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input',
+    textOutputPipValue: '#forex-calculator > div > div.col-sm-8 > form > div:nth-child(4) > div:nth-child(1) > div > input',
+    dropPair: '#dp_currency_pair',
+    dropBaseCurrency: '#forex-calculator > div > div.col-sm-8 > form > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > select',
+    dropAccountType: '#account_type_select',
+    buttonCookie: '#cookieModal > div > div > div.cookie-modal__defaultBlock > div.modal-body > div.row.text-center > div > button',
+    buttonCalculate: '#submit-btn'
+}
+let cookiesConfirmed = false;
+const caches = new utils.CachingObject(CACHE_EXPIRE_SEC)
 
 // recommended risk is at 1.5%
 async function suggestLot(pair, distancePoints, risk=220.0) {    
-    const pipValue = await fetchPipValueOneLot(pair)
+    const pipValue = await crawlPipValueOneLot(pair)
     const result = calculateLot(pipValue, distancePoints, risk)
     return result
 }
 
-let cookiesConfirmed = false;
-async function fetchPipValueOneLot(pair, useCache=true) {
+async function crawlPipValueOneLot(pair, useCache=true) {
     pairBase = pair.substring(pair.length-3)
-    if(useCache & pairBase in caches) {
-        cachedObj = caches[pairBase]
-        if(Date.now() - cachedObj.time <= CACHE_EXPIRE) {
-            if(cachedObj.value !== null)
-                return cachedObj.value
-        }
+    const cachedValue = caches.getValidCache(pairBase)
+    if(useCache && cachedValue != null && cachedValue != NaN) {
+        console.log('found pip value cache for', pairBase, '=', cachedValue)
+        return cachedValue
     }
-
-    console.log('fetching pip value of', pair)
-
+    
+    console.log('crawling pip value of', pair)
     const onFetch = async (page) => {
         if(!cookiesConfirmed) {
-            await pup.waitVisibleAndClick(page, BUTTON_COOKIE)
+            await pup.waitVisibleAndClick(page, elems.buttonCookie)
             cookiesConfirmed = true
         }
     
         await delay(1000)
-        await page.select(DROP_PAIR, pair)
-        await pup.waitVisibleAndType(page, TEXT_INPUT_LOT, '1')
-        await page.select(DROP_BASE_CURRENCY, BASE_CURRENCY)
-        await page.select(DROP_ACCOUNT_TYPE, ACCOUNT_TYPE)
+        await page.select(elems.dropPair, pair)
+        await pup.waitVisibleAndType(page, elems.textInputLot, '1')
+        await page.select(elems.dropBaseCurrency, BASE_CURRENCY)
+        await page.select(elems.dropAccountType, ACCOUNT_TYPE)
+        await pup.waitVisibleAndClick(page, elems.buttonCalculate)
     
-        await pup.waitVisibleAndClick(page, BUTTON_CALCULATE)
-    
-        await pup.waitVisibleAndClick(page, TEXT_OUTPUT_PIP_VALUE)
-        const pipValue = parseFloat(await page.evaluate(s=>document.querySelector(s).value,TEXT_OUTPUT_PIP_VALUE))
-        
-        caches[pairBase] = {
-            time: Date.now(),
-            value: pipValue
-        }
-    
-        console.log('fetching pip value of', pair, 'finished', pipValue)
+        await pup.waitVisibleAndClick(page, elems.textOutputPipValue)
+        await delay(500)
+        const pipValueText = await page.evaluate(s=>document.querySelector(s).value, elems.textOutputPipValue)
+        const pipValue = parseFloat(pipValueText)
+        caches.setCache(pairBase, pipValue)
+        console.log('crawled pip value of', pairBase, '=', pipValue)
         return pipValue
     }
 
     await crawler.crawlAndProduce(URL, onFetch)
-    return await fetchPipValueOneLot(pair)
+    return await crawlPipValueOneLot(pair, true)
 }
 
 function calculateLot(pipValue, distancePoint, maxRisk) {
@@ -77,10 +67,9 @@ function calculateLot(pipValue, distancePoint, maxRisk) {
 }
 
 async function fetchPipValueLoop() {
-    console.log('fetch loop starting on', AUTO_FETCH_PAIRS)
     while(true) {
         for(let pair of AUTO_FETCH_PAIRS) {
-            await fetchPipValueOneLot(pair, false)
+            await crawlPipValueOneLot(pair, false)
             await delay(POLL_INTERVAL)
         }
     }

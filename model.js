@@ -12,6 +12,12 @@ class TradePos {
         else
             return new TradePos(stringPos, true)
     }
+
+    static parseList(commaSplitString) {
+        const splitted = commaSplitString.split(',')
+        const positions = splitted.map(TradePos.parse)
+        return positions
+    }
 }
 
 module.exports = {

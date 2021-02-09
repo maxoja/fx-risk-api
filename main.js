@@ -4,7 +4,7 @@ const express = require('express');
 const {TradePos} = require('./model')
 const correlation = require('./correlation')
 const risk = require('./risk')
-const {BASE_PATH, PORT} = require('./settings')
+const {BASE_PATH, PORT, AVG_CORRELATION_THRESH} = require('./settings')
 
 const app = express();
 app.use(express.json());
@@ -31,20 +31,25 @@ app.get(BASE_PATH + '/:pair-:points', async (req, res) => {
 })
 
 app.get(BASE_PATH + '/diversify/:positionStr', async (req, res) => {
-    const splitted = req.params['positionStr'].split(',')
-    const positions = splitted.map(TradePos.parse)
+    const positions = TradePos.parseList(req.params['positionStr'])
     const suggestions = await correlation.suggestDiversification(positions)
     res.send(suggestions.map(o => JSON.stringify(o)).join('<br/>'))
 })
 
 app.get(BASE_PATH + '/correlation/:positionStr', async (req, res) => {
-    const splitted = req.params['positionStr'].split(',')
-    const positions = splitted.map(TradePos.parse)
+    const positions = TradePos.parseList(req.params['positionStr'])
     const avgCorrelations = await correlation.calculateAverageCorrelation(positions)
+    const selectedIdeal = {}
+    const theRest = {}
+    for(let pair in avgCorrelations) {
+        if(Math.abs(avgCorrelations[pair]) <= AVG_CORRELATION_THRESH)
+            selectedIdeal[pair] = avgCorrelations[pair]
+        else
+            theRest[pair] = avgCorrelations[pair]
+    }
+
     res.header("Content-Type",'application/json');
-    res.send(JSON.stringify(avgCorrelations, null, 4));
-    // res.send(avgCorrelations)
-    // res.send(suggestions.map(o => JSON.stringify(o)).join('<br/>'))
+    res.send(JSON.stringify([selectedIdeal, theRest], null, 4));
 })
 
 correlation.fetchLoop();
