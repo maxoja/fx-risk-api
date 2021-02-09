@@ -1,46 +1,49 @@
 const { delay } = require('bluebird')
 const fetcher = require('./crawler')
 
-const {POLL_INTERVAL} = require('./settings')
+const utils = require('./utils')
 const {TradePos} = require('./model')
-
-const PAIR_ID = {
-    AUDCAD: 8,
-    AUDCHF: 47,
-    AUDJPY: 9,
-    AUDNZD: 10,
-    AUDUSD: 11,
-    CADCHF: 103,
-    CADJPY: 12,
-    CHFJPY: 46,
-    EURAUD: 6,
-    EURCAD: 13,
-    EURCHF: 14,
-    EURGBP: 17,
-    EURJPY: 7,
-    EURNZD: 20,
-    EURUSD: 1,
-    GBPAUD: 107,
-    GBPCAD: 24,
-    GBPCHF: 25,
-    GBPJPY: 4,
-    GBPNZD: 48,
-    GBPUSD: 27,
-    NZDCAD: 49,
-    NZDCHF: 26,
-    NZDJPY: 2,
-    NZDUSD: 28,
-    USDCAD: 5,
-    USDCHF: 29,
-    USDJPY: 3,
-}
-
+const {POLL_INTERVAL, CORRELATION_THRESH, PAIR_ID} = require('./settings')
 const correlationTable = {}
-for(let pair in PAIR_ID) {
-    correlationTable[pair] = {}
+
+function init() {
+    for(let pair in PAIR_ID) {
+        correlationTable[pair] = {}
+    }
 }
 
-async function suggestTradePos(currentPositions) {
+async function calculateAverageCorrelation(currentPositions) {
+    const scores = {}
+
+    for(let pair in PAIR_ID) {
+        
+        let correlationSum = 0
+        let isHolding = false
+        const correlations = correlationTable[pair]
+
+        if(utils.emptyObject(correlations))
+            await fetchCorrelationList(pair)
+
+        for(let pos of currentPositions) {
+            if(pos.pair === pair) {
+                isHolding = true;
+                break
+            }
+            const correlation = correlations[pos.pair]
+            correlationSum += correlation
+        }
+
+        if(isHolding)
+            continue
+
+        const averageCorrelation = correlationSum/currentPositions.length
+        scores[pair] = Math.round(averageCorrelation)
+    }
+
+    return scores
+}
+
+async function suggestDiversification(currentPositions) {
     const suggestions = []
     
     for(let pair in PAIR_ID) {
@@ -60,15 +63,15 @@ async function suggestTradePos(currentPositions) {
             }
             const correlation = table[pos.pair]
             if(couldBuy) {
-                if(pos.buy && correlation > 50 )
+                if(pos.buy && correlation > CORRELATION_THRESH )
                     couldBuy = false
-                if(!pos.buy && correlation < -50)
+                if(!pos.buy && correlation < -CORRELATION_THRESH)
                     couldBuy = false
             }
             if(couldSell) {
-                if(pos.buy && correlation < -50)
+                if(pos.buy && correlation < -CORRELATION_THRESH)
                     couldSell = false
-                if(!pos.buy && correlation > 50)
+                if(!pos.buy && correlation > CORRELATION_THRESH)
                     couldSell = false
             }
         }
@@ -125,7 +128,10 @@ async function fetchLoop() {
     }
 }
 
+init()
+
 module.exports = {
     fetchLoop,
-    suggestTradePos
+    suggestDiversification,
+    calculateAverageCorrelation
 }
