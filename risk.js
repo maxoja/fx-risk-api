@@ -1,6 +1,7 @@
 const { delay } = require('bluebird')
 const pup = require('./puppet')
 const crawler = require('./crawler')
+const utils = require('./utils')
 
 const {BASE_CURRENCY, CACHE_EXPIRE, POLL_INTERVAL} = require('./settings')
 
@@ -31,7 +32,8 @@ async function fetchPipValueOneLot(pair, useCache=true) {
     if(useCache & pairBase in caches) {
         cachedObj = caches[pairBase]
         if(Date.now() - cachedObj.time <= CACHE_EXPIRE) {
-            return cachedObj.value
+            if(cacheObj.value !== null)
+                return cachedObj.value
         }
     }
 
@@ -70,7 +72,7 @@ function calculateLot(pipValue, distancePoint, maxRisk) {
     const pointValue = pipValue/10.0
     const oneLotRisk = pointValue*distancePoint
     const goodLot = maxRisk/oneLotRisk
-    return Math.floor(goodLot*100)/100
+    return utils.roundPrecision(goodLot)
 }
 
 async function fetchPipValueLoop() {
