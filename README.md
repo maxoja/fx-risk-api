@@ -1,4 +1,4 @@
 # Todo
-- diversify return quantity instead
+- ! lot size api returns null lot
+- refactor
 - build gui
-- ! lot size api returns null lot, 
