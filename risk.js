@@ -27,12 +27,13 @@ async function suggestLot(pair, distancePoints, risk=220.0) {
 async function crawlPipValueOneLot(pair, useCache=true) {
     pairBase = pair.substring(pair.length-3)
     const cachedValue = caches.getValidCache(pairBase)
-    if(useCache && cachedValue != null && cachedValue != NaN) {
+    if(useCache && cachedValue != null && !isNaN(cachedValue)) {
         console.log('found pip value cache for', pairBase, '=', cachedValue)
         return cachedValue
     }
     
-    console.log('crawling pip value of', pair)
+    console.log('crawl pip value for', pairBase)
+    await delay(3000)
     const onFetch = async (page) => {
         if(!cookiesConfirmed) {
             await pup.waitVisibleAndClick(page, elems.buttonCookie)
@@ -51,7 +52,6 @@ async function crawlPipValueOneLot(pair, useCache=true) {
         const pipValueText = await page.evaluate(s=>document.querySelector(s).value, elems.textOutputPipValue)
         const pipValue = parseFloat(pipValueText)
         caches.setCache(pairBase, pipValue)
-        console.log('crawled pip value of', pairBase, '=', pipValue)
         return pipValue
     }
 

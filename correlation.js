@@ -97,7 +97,7 @@ function rowCorrelationSelector(id) {
 }
 
 async function fetchCorrelationList(pair) {
-    console.log('fetching correlation of', pair)
+    console.log('crawling correlation', pair)
     const pairId = PAIR_ID[pair]
     const allPairIds = Object.keys(PAIR_ID).map(function(key){
         return PAIR_ID[key];
