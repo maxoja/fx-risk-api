@@ -4,6 +4,7 @@ const express = require('express');
 const {TradePos} = require('./model')
 const correlation = require('./correlation')
 const risk = require('./risk')
+const swap = require('./swap')
 const {BASE_PATH, PORT, NEUTRAL_CORRELATION_THRESH, UNBALANCED_CORRELATION_THRESH} = require('./settings')
 
 const app = express();
@@ -60,6 +61,37 @@ app.get(BASE_PATH + '/correlation/:positionStr', async (req, res) => {
         }
     }
     console.log('return correlation', result)
+    res.header("Content-Type",'application/json');
+    res.send(JSON.stringify(result, null, 4));
+})
+
+app.get(BASE_PATH + '/swaps', async (req, res) => {
+    const swapRates = swap.rates;
+
+    const result = {
+        badLongRate: [],
+        badShortRate: []
+    }
+
+    for(let pair in swapRates) {
+        const swapObj = swapRates[pair]
+        
+        result.badLongRate.push({
+            pair,
+            swap: swapObj.long
+        })
+
+        result.badShortRate.push({
+            pair,
+            swap: swapObj.short
+        })
+    }
+
+    result.badLongRate.sort((a,b) => a.swap - b.swap)
+    result.badShortRate.sort((a,b) => a.swap - b.swap)
+    result.badLongRate = result.badLongRate.map(o => o.pair + ' ' + o.swap).slice(0, 10)
+    result.badShortRate = result.badShortRate.map(o => o.pair + ' ' + o.swap).slice(0, 10)
+    console.log('return sorted swap rates', result)
     res.header("Content-Type",'application/json');
     res.send(JSON.stringify(result, null, 4));
 })

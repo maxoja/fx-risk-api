@@ -185,6 +185,6 @@ const rates = {
     },
 }
 module.exports = {
-    fetchLoop,
+    // fetchLoop,
     rates,
 }
