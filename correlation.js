@@ -104,7 +104,7 @@ async function fetchCorrelationList(pair) {
     });
 
     const URL = `https://widgets.myfxbook.com/widgets/market-correlation.html?rowSymbols=${allPairIds.join()}&colSymbols=${pairId}&timeScale=1440`
-    const onFetch = async (page) => {
+    const onFetch = async (page, pup) => {
         await page.waitForSelector('tr');
 
         for(let i = 0; i < Object.keys(PAIR_ID).length; i++) {

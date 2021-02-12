@@ -34,7 +34,7 @@ async function crawlPipValueOneLot(pair, useCache=true) {
     
     console.log('crawl pip value for', pairBase)
     await delay(3000)
-    const onFetch = async (page) => {
+    const onFetch = async (page, pup) => {
         if(!cookiesConfirmed) {
             await pup.waitVisibleAndClick(page, elems.buttonCookie)
             cookiesConfirmed = true

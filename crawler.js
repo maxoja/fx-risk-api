@@ -13,7 +13,7 @@ async function crawlAndProduce(URL, onFetch) {
     const browser = await getBrowser()
     const page = await pup.prepPage(browser, false)
     await page.goto(URL, {waitUntil:'load'})
-    const result = await onFetch(page)
+    const result = await onFetch(page, pup)
     await page.close()
     return result
 }

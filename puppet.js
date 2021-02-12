@@ -5,6 +5,10 @@ PROXY_ARG = '--proxy-server=zproxy.lum-superproxy.io:22225'
 PROXY_USERNAME = ''
 PROXY_PASSWORD = ''
 
+async function getText(page, selector) {
+    return await page.evaluate(s => document.querySelector(s).innerText, selector)
+}
+
 async function waitVisibleAndClick(page, selector) {
     await page.waitForFunction('document.querySelector("' + selector + '") !== null')
     await page.waitForSelector(selector, {visible:true})
@@ -114,5 +118,6 @@ module.exports = {
     loadSessionIntoPage,
     useThrottlingInPage,
     waitVisibleAndClick,
-    waitVisibleAndType
+    waitVisibleAndType,
+    getText
 }
